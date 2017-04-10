@@ -1,0 +1,8 @@
+acl_check_rcpt:
+    accept  local_parts  = postmaster
+             domains     = +local_domains
+             control     = dkim_disable_verify
+             set acl_m_postmaster = yes 
+
+acl_check_data:
+    accept  condition = ${if eq{$acl_m_postmaster}{yes}{true}{false}}

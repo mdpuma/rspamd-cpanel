@@ -1,0 +1,17 @@
+if not first_delivery then
+	finish
+endif
+
+if "${if def:header_X-Spam-Subject: {there}}" is there then
+	headers remove Subject
+	headers add "Subject: $rh_X-Spam-Subject:"
+	headers remove X-Spam-Subject
+endif
+
+if $h_X-Spam-Score: contains "+++++" and $h_To contains "postmaster" then
+	if $h_X-Spam-Score: contains "+++++++++++" then
+		save "/dev/null"
+	else
+		deliver "spam@amplica.md"
+	endif
+endif

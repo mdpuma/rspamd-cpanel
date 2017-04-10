@@ -1,0 +1,55 @@
+1. go to whm -> exim configuration manager
+2. choose advanced editor
+3. search spamd & replace with this:
+
+spamd_address = 127.0.0.1 11333 variant=rspamd
+
+4. find and disable greylisting block
+5. find section acl_smtp_data:custom_begin_spam_scan
+6. complete block with this:
+
+  warn   
+        # Remove spam headers from outside sources
+        remove_header  = x-spam-subject : x-spam-status : x-spam-score : x-spam-bar : x-spam-report : x-spam-flag : x-ham-report  
+
+  # do not scan messages from submission port
+  accept condition = ${if eq{$interface_port}{587}}
+
+  # skip scanning for authenticated users
+  accept authenticated = *
+
+  accept condition = ${if match_ip{$sender_host_address}{net-iplsearch;/etc/trustedmailhosts}{1}{0}}
+        
+  warn  spam        = nobody:true
+        log_message = "rspam_score: $spam_score ($spam_bar) rspam_report: $spam_report"
+  
+  # add spam-score and spam-report header when told by rspamd
+  warn  spam       = nobody:true
+        add_header = X-Spam-Score: $spam_score ($spam_bar)
+        add_header = X-Spam-Report: $spam_report
+        add_header = X-Spam-Action: $spam_action
+        
+  warn  spam       = nobody:true
+        condition  = ${if eq{$spam_action}{rewrite subject}}
+        add_header = X-Spam-Subject: ***SPAM*** $rh_subject
+
+  defer message    = Please try again later
+        condition   = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{0}{1}}
+        condition  = ${if eq{$spam_action}{soft reject}}
+
+  deny  message    = Message discarded as high-probability spam
+        condition  = ${if eq{$spam_action}{reject}}
+        
+7. disable  default_spam_scan, default_spam_scan_check block
+8. disable acl_not_smtp:outgoing_spam_scan_over_int,  acl_smtp_data:no_forward_outbound_spam_over_int
+
+
+system_filter:
+
+# Exim filter
+if "${if def:header_X-Spam-Subject: {there}}" is there
+then
+    headers remove Subject
+    headers add "Subject: $rh_X-Spam-Subject:"
+    headers remove X-Spam-Subject
+endif
