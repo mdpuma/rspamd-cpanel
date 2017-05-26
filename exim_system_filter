@@ -8,10 +8,10 @@ if "${if def:header_X-Spam-Subject: {there}}" is there then
 	headers remove X-Spam-Subject
 endif
 
-if $h_X-Spam-Score: contains "+++++" and $h_To contains "postmaster" then
-	if $h_X-Spam-Score: contains "+++++++++++" then
-		save "/dev/null"
-	else
-		deliver "spam@amplica.md"
-	endif
+if $h_X-Spam-Score: contains "+++++" and $h_To does not contains "postmaster" then
+        if $h_X-Spam-Score: contains "+++++++++++" then
+                save "/dev/null"
+        else
+                deliver "spam@amplica.md"
+        endif
 endif

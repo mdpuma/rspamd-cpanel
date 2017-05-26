@@ -1,0 +1,6 @@
+hostlist trustedmailhosts = lsearch;/etc/trustedmailhosts
+
+
+accept  hosts = +trustedmailhosts
+
+accept  condition = ${if match_ip{$sender_host_address}{net-iplsearch;/etc/trustedmailhosts}{1}{0}}
