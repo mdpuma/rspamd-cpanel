@@ -1,3 +1,8 @@
+#Exim filter
+
+# change directive in /etc/exim.conf
+# system_filter = /etc/exim_system_filter
+
 if not first_delivery then
 	finish
 endif

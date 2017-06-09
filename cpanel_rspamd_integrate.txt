@@ -1,15 +1,15 @@
-1. go to whm -> exim configuration manager
-2. choose advanced editor
-3. search spamd & replace with this:
+* go to whm -> exim configuration manager
+* choose advanced editor
+* search spamd & replace with this:
 
 spamd_address = 127.0.0.1 11333 variant=rspamd
 
 system_filter = /etc/exim_system_filter
 system_filter_file_transport = address_file
 
-4. find and disable greylisting block
-5. find section acl_smtp_data:custom_begin_spam_scan
-6. complete block with this:
+* find and disable greylisting block
+* find section acl_smtp_data:custom_begin_spam_scan
+* complete block with this:
 
   warn   
         # Remove spam headers from outside sources
@@ -29,11 +29,7 @@ system_filter_file_transport = address_file
         add_header = X-Spam-Score: $spam_score ($spam_bar)
         add_header = X-Spam-Report: $spam_report
         add_header = X-Spam-Action: $spam_action
-  
-  warn  spam       = nobody:true
-#        condition  = ${if match{$spam_bar}{+++++}}
-        add_header = X-Spam-Status: Yes
-  
+        
   warn  spam       = nobody:true
         condition  = ${if eq{$spam_action}{rewrite subject}}
         add_header = X-Spam-Subject: ***SPAM*** $rh_subject
@@ -42,10 +38,12 @@ system_filter_file_transport = address_file
   defer message    = Please try again later
         condition  = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{0}{1}}
         condition  = ${if eq{$spam_action}{greylist}}
+        domains    = +local_domains
         
   defer message    = Please try again later
         condition  = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{0}{1}}
         condition  = ${if eq{$spam_action}{soft reject}}
+        domains    = +local_domains
 
   deny  message    = Message discarded as high-probability spam
         condition  = ${if eq{$spam_action}{reject}}
@@ -65,11 +63,26 @@ then
 endif
 
 
-* add router which will store Spam messages in INBOX.Junk directory
+# should be earlier than central_user_filter, virtual_user_filter
+# just search Section: PREFILTER in WHM -> Exim Configuration Manager
 
+begin routers
+
+virtual_user_spam_dir: << here
+central_user_filter:
+virtual_user_filter:
+virtual_aliases_nostar:
+virtual_user_spam:
+virtual_boxtrapper_user:
+virtual_user:
+
+
+
+# router which will store Spam messages in INBOX.Spam directory
 virtual_user_spam_dir:
     driver = redirect
     domains = !$primary_hostname
     condition = ${if match{$header_X-Spam-Score:}{\N\+\+\+\+\+\N}{yes}{no}}
-    data = "$local_part+Junk@$domain"
+    require_files = "+/etc/valiases/$domain:+${extract{5}{::}{${lookup passwd{${lookup{$domain}lsearch{/etc/userdomains}{$value}}}{$value}}}}/mail/$domain/$local_part"
+    data = "$local_part+Spam@$domain"
     redirect_router = virtual_user
