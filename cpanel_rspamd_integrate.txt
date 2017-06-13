@@ -36,14 +36,14 @@ system_filter_file_transport = address_file
         add_header = X-Spam-Status: Yes
 
   defer message    = Please try again later
-        condition  = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{0}{1}}
+        condition  = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{1}{0}}
         condition  = ${if eq{$spam_action}{greylist}}
-        domains    = +local_domains
+        ! authenticated = *
         
   defer message    = Please try again later
-        condition  = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{0}{1}}
+        condition  = ${if forall{<, $recipients}{match_domain{${domain:$item}}{+local_domains}}{1}{0}}
         condition  = ${if eq{$spam_action}{soft reject}}
-        domains    = +local_domains
+        ! authenticated = *
 
   deny  message    = Message discarded as high-probability spam
         condition  = ${if eq{$spam_action}{reject}}
